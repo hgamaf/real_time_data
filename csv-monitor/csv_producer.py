@@ -1,5 +1,5 @@
 import pandas as pd
-from kafka import KafkaProducer
+from confluent_kafka import Producer
 import json
 import time
 import os
@@ -9,10 +9,24 @@ class CSVMonitor:
     def __init__(self, csv_file, kafka_topic, bootstrap_servers='localhost:9092'):
         self.csv_file = csv_file
         self.kafka_topic = kafka_topic
-        self.producer = KafkaProducer(
-            bootstrap_servers=bootstrap_servers,
-            value_serializer=lambda v: json.dumps(v).encode('utf-8')
-        )
+        
+        # Verificar se arquivo CSV existe
+        if not os.path.exists(csv_file):
+            raise FileNotFoundError(f"Arquivo CSV não encontrado: {csv_file}")
+        
+        try:
+            self.producer = Producer({
+                'bootstrap.servers': bootstrap_servers,
+                'client.id': 'csv-producer',
+                'socket.timeout.ms': 10000,
+                'message.timeout.ms': 10000
+            })
+            print(f"Conectado ao Kafka em {bootstrap_servers}")
+        except Exception as e:
+            print(f"Erro ao conectar com Kafka: {e}")
+            print("Certifique-se de que o Kafka está rodando em localhost:9092")
+            raise
+            
         self.last_modified = 0
         self.processed_rows = set()
         
@@ -29,13 +43,38 @@ class CSVMonitor:
         """Gera um hash único para uma linha"""
         return hash(tuple(row))
     
+    def send_all_data(self):
+        """Envia todos os dados do CSV para o Kafka"""
+        print("Enviando todos os dados do CSV...")
+        
+        df = self.read_csv()
+        if df.empty:
+            return
+        
+        for _, row in df.iterrows():
+            # Converter a linha para dicionário
+            row_data = row.to_dict()
+            row_data['timestamp'] = datetime.now().isoformat()
+            
+            # Enviar para o Kafka
+            self.producer.produce(
+                self.kafka_topic, 
+                key=str(row_data['id']),  # Usar ID como chave
+                value=json.dumps(row_data).encode('utf-8')
+            )
+            self.producer.flush()
+            print(f"Enviado: {row_data}")
+
     def send_new_data(self):
         """Verifica por novas linhas e envia para o Kafka"""
         current_modified = os.path.getmtime(self.csv_file)
         
         if current_modified > self.last_modified:
-            print("Arquivo modificado. Processando novas linhas...")
+            print("Arquivo modificado. Processando todas as linhas...")
             self.last_modified = current_modified
+            
+            # Limpar dados processados para reenviar tudo
+            self.processed_rows.clear()
             
             df = self.read_csv()
             if df.empty:
@@ -50,7 +89,12 @@ class CSVMonitor:
                     row_data['timestamp'] = datetime.now().isoformat()
                     
                     # Enviar para o Kafka
-                    self.producer.send(self.kafka_topic, row_data)
+                    self.producer.produce(
+                        self.kafka_topic, 
+                        key=str(row_data['id']),
+                        value=json.dumps(row_data).encode('utf-8')
+                    )
+                    self.producer.flush()
                     print(f"Enviado: {row_data}")
                     
                     self.processed_rows.add(row_hash)
@@ -72,9 +116,12 @@ class CSVMonitor:
             self.producer.close()
 
 if __name__ == "__main__":
-    # Configurações
-    CSV_FILE = "../data/input.csv"
+    # Configurações - usar caminho absoluto
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    CSV_FILE = os.path.join(script_dir, "../data/input.csv")
     KAFKA_TOPIC = "csv-data"
+    
+    print(f"Monitorando arquivo: {os.path.abspath(CSV_FILE)}")
     
     # Criar monitor e executar
     monitor = CSVMonitor(CSV_FILE, KAFKA_TOPIC)
