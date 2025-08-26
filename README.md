@@ -12,7 +12,9 @@ Sistema completo de processamento e visualização de dados em tempo real que mo
 ✅ **Métricas Dinâmicas**: Valor total, médio, contadores e estatísticas  
 ✅ **Kafka Integration**: Processamento de dados via Apache Kafka  
 ✅ **UI do Kafka**: Interface web para monitorar tópicos e mensagens (AKHQ)  
-✅ **Fácil de Usar**: Adicione dados no CSV ou via UI e veja as mudanças instantaneamente  
+✅ **Sincronização Completa**: Remoção de dados do CSV reflete no dashboard  
+✅ **Testes Automatizados**: Bateria completa de testes com pytest  
+✅ **Fácil de Usar**: Adicione/remova dados no CSV ou via UI e veja as mudanças instantaneamente  
 
 ## 🚀 Início Rápido
 
@@ -60,6 +62,7 @@ echo "8,Roberto,45,Fortaleza,275.50" >> data/input.csv
 
 ### Controles
 - 🔄 **Auto-refresh**: Atualização automática (3s)
+- 🗑️ **Limpar Cache**: Remove dados antigos do dashboard
 - 📋 **Tabelas Dinâmicas**: Dados completos e estatísticas
 - 📄 **Info do Arquivo**: Metadados em tempo real
 
@@ -90,6 +93,11 @@ real_time_data/
 │   └── csv_producer.py     # Monitora CSV e envia para Kafka
 ├── 📂 data/               # Dados de entrada  
 │   └── input.csv          # Arquivo CSV monitorado
+├── 📂 tests/              # Testes automatizados
+│   ├── __init__.py        # Pacote de testes
+│   ├── test_csv_producer.py    # Testes do CSV producer
+│   ├── test_dashboard.py       # Testes do dashboard
+│   └── test_integration.py     # Testes de integração
 ├── 📂 img/                # Imagens da documentação
 │   └── dashboard_img.png   # Preview do dashboard
 ├── 🐳 docker-compose.yml  # Infraestrutura (Kafka, Zookeeper, AKHQ)
@@ -112,12 +120,15 @@ id,nome,idade,cidade,valor
 - **Kafka Broker**: localhost:9092  
 - **Zookeeper**: localhost:2181
 
-### Como Inserir Dados
+### Como Inserir/Remover Dados
 
 #### Via CSV (Automático)
 ```bash
 # Adicionar nova linha no CSV
 echo "11,Fernanda,29,Fortaleza,680.90" >> data/input.csv
+
+# Remover dados (editar arquivo)
+# O dashboard será automaticamente atualizado para refletir as mudanças
 ```
 
 #### Via Kafka UI
@@ -136,10 +147,36 @@ echo "11,Fernanda,29,Fortaleza,680.90" >> data/input.csv
 }
 ```
 
-#### Via Script Python
+## 🧪 Testes
+
+O projeto inclui uma bateria completa de testes automatizados:
+
+### Executar Todos os Testes
 ```bash
-python scripts/send_test_data.py
+# Executar todos os testes
+uv run pytest tests/ -v
+
+# Executar com cobertura
+uv add pytest-cov --dev
+uv run pytest tests/ --cov=. --cov-report=html
 ```
+
+### Testes Específicos
+```bash
+# Testes do CSV Producer
+uv run pytest tests/test_csv_producer.py -v
+
+# Testes do Dashboard  
+uv run pytest tests/test_dashboard.py -v
+
+# Testes de Integração
+uv run pytest tests/test_integration.py -v
+```
+
+### Cobertura dos Testes
+- ✅ **CSV Producer**: Inicialização, leitura de CSV, envio para Kafka
+- ✅ **Dashboard**: Processamento de mensagens, deduplicação, métricas
+- ✅ **Integração**: Fluxo completo, tratamento de erros, monitoramento
 
 ## 🛠️ Tecnologias
 
@@ -192,7 +229,22 @@ docker logs akhq
 ### Dashboard não atualiza
 - Verifique se o CSV producer está rodando
 - Confirme se há dados no tópico Kafka via AKHQ UI
+- Use o botão "🗑️ Limpar Cache" no dashboard
 - Reinicie o dashboard Streamlit
+
+### Dados removidos do CSV não somem do dashboard
+- O sistema agora envia comandos de reset automaticamente
+- Use o botão "🗑️ Limpar Cache" se necessário
+- Verifique se o CSV producer detectou a mudança no arquivo
+
+### Testes falhando
+```bash
+# Verificar dependências
+uv sync
+
+# Executar testes individualmente
+uv run pytest tests/test_csv_producer.py -v -s
+```
 
 ## 🎯 Casos de Uso
 
@@ -235,6 +287,14 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para detalhes.
 ✅ **Kafka**: Processamento de streaming  
 ✅ **Dashboard**: Visualização em tempo real  
 ✅ **CSV Monitor**: Detecção automática de mudanças  
+✅ **Sincronização**: Remoção de dados reflete no dashboard  
 ✅ **UI Management**: Interface para gerenciar dados  
+✅ **Testes**: Bateria completa de testes automatizados  
 
-**🚀 Sistema completo de streaming de dados funcionando!**
+### Funcionalidades Avançadas
+- 🔄 **Reset Automático**: Quando dados são removidos do CSV, o dashboard é limpo automaticamente
+- 🧪 **Testes Completos**: 9 testes cobrindo todas as funcionalidades principais
+- 🗑️ **Controle Manual**: Botão para limpar cache quando necessário
+- 📊 **Métricas Precisas**: Cálculos com tratamento de precisão decimal
+
+**🚀 Sistema completo de streaming de dados com sincronização total funcionando!**

@@ -70,34 +70,49 @@ class CSVMonitor:
         current_modified = os.path.getmtime(self.csv_file)
         
         if current_modified > self.last_modified:
-            print("Arquivo modificado. Processando todas as linhas...")
+            print("Arquivo modificado. Enviando snapshot completo...")
             self.last_modified = current_modified
+            
+            # Primeiro, enviar mensagem de reset para limpar dados antigos
+            reset_message = {
+                'action': 'reset',
+                'timestamp': datetime.now().isoformat()
+            }
+            self.producer.produce(
+                self.kafka_topic,
+                key='__reset__',
+                value=json.dumps(reset_message).encode('utf-8')
+            )
+            self.producer.flush()
+            print("Enviado comando de reset")
             
             # Limpar dados processados para reenviar tudo
             self.processed_rows.clear()
             
             df = self.read_csv()
             if df.empty:
+                print("CSV vazio - todos os dados foram removidos")
                 return
             
+            # Enviar todos os dados atuais do CSV
             for _, row in df.iterrows():
                 row_hash = self.get_row_hash(row)
                 
-                if row_hash not in self.processed_rows:
-                    # Converter a linha para dicionário
-                    row_data = row.to_dict()
-                    row_data['timestamp'] = datetime.now().isoformat()
-                    
-                    # Enviar para o Kafka
-                    self.producer.produce(
-                        self.kafka_topic, 
-                        key=str(row_data['id']),
-                        value=json.dumps(row_data).encode('utf-8')
-                    )
-                    self.producer.flush()
-                    print(f"Enviado: {row_data}")
-                    
-                    self.processed_rows.add(row_hash)
+                # Converter a linha para dicionário
+                row_data = row.to_dict()
+                row_data['timestamp'] = datetime.now().isoformat()
+                row_data['action'] = 'upsert'  # Indicar que é inserção/atualização
+                
+                # Enviar para o Kafka
+                self.producer.produce(
+                    self.kafka_topic, 
+                    key=str(row_data['id']),
+                    value=json.dumps(row_data).encode('utf-8')
+                )
+                self.producer.flush()
+                print(f"Enviado: {row_data}")
+                
+                self.processed_rows.add(row_hash)
     
     def run(self, interval=5):
         """Executa o monitor continuamente"""

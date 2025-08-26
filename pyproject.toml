@@ -10,6 +10,7 @@ dependencies = [
     "streamlit>=1.48.1",
     "plotly>=5.15.0",
     "pytest>=8.4.1",
+    "watchdog>=6.0.0",
 ]
 
 [dependency-groups]

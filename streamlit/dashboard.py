@@ -85,15 +85,29 @@ def update_data():
     new_data = load_kafka_data()
     
     if not new_data.empty:
-        if st.session_state.kafka_data.empty:
-            st.session_state.kafka_data = new_data
-        else:
-            # Combinar dados novos com existentes
-            combined = pd.concat([st.session_state.kafka_data, new_data], ignore_index=True)
-            # Remover duplicatas baseado no ID (manter a mais recente)
-            if 'id' in combined.columns:
-                combined = combined.drop_duplicates(subset=['id'], keep='last')
-            st.session_state.kafka_data = combined
+        # Verificar se há comando de reset
+        reset_messages = new_data[new_data.get('action') == 'reset']
+        if not reset_messages.empty:
+            print("Reset detectado - limpando dados existentes")
+            st.session_state.kafka_data = pd.DataFrame()
+            # Remover mensagens de reset dos novos dados
+            new_data = new_data[new_data.get('action') != 'reset']
+        
+        # Processar dados normais
+        if not new_data.empty:
+            # Remover coluna 'action' se existir (não precisamos dela no dashboard)
+            if 'action' in new_data.columns:
+                new_data = new_data.drop('action', axis=1)
+            
+            if st.session_state.kafka_data.empty:
+                st.session_state.kafka_data = new_data
+            else:
+                # Combinar dados novos com existentes
+                combined = pd.concat([st.session_state.kafka_data, new_data], ignore_index=True)
+                # Remover duplicatas baseado no ID (manter a mais recente)
+                if 'id' in combined.columns:
+                    combined = combined.drop_duplicates(subset=['id'], keep='last')
+                st.session_state.kafka_data = combined
     
     return st.session_state.kafka_data
 
@@ -102,7 +116,7 @@ def main():
     st.markdown("---")
     
     # Controles
-    col1, col2, col3 = st.columns([1, 1, 2])
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     
     with col1:
         if st.button("🔄 Atualizar Dados", type="primary"):
@@ -110,9 +124,14 @@ def main():
             st.rerun()
     
     with col2:
-        auto_refresh = st.checkbox("🔄 Auto-refresh (3s)", value=True)
+        if st.button("🗑️ Limpar Cache"):
+            st.session_state.kafka_data = pd.DataFrame()
+            st.rerun()
     
     with col3:
+        auto_refresh = st.checkbox("🔄 Auto-refresh (3s)", value=True)
+    
+    with col4:
         consumer = get_kafka_consumer()
         if consumer:
             st.markdown("**📡 Status:** 🟢 Conectado ao Kafka")
