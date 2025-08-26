@@ -12,7 +12,7 @@ docker --version
 ### 2. Instalar Dependências
 ```bash
 cd real_time_data
-pip install streamlit plotly pandas confluent-kafka
+pip install -e .
 ```
 
 ### 3. Iniciar Dashboard

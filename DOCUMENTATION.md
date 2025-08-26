@@ -42,8 +42,7 @@ real_time_data/
 ├── 🐳 docker-compose.yml       # Infraestrutura Docker
 ├── 🚀 start.py                 # Script de inicialização
 ├── 📋 main.py                  # Entry point principal
-├── 📦 pyproject.toml           # Dependências (uv/pip)
-├── 📦 requirements.txt         # Dependências alternativas
+├── 📦 pyproject.toml           # Dependências do projeto
 └── 📖 README.md                # Documentação básica
 ```
 
@@ -84,7 +83,7 @@ docker-compose --version  # Docker Compose 2.0+
 cd real_time_data
 
 # Instalar dependências
-pip install -r requirements.txt
+pip install -e .
 
 # Ou usando uv (recomendado)
 uv sync
@@ -248,8 +247,7 @@ docker-compose logs kafka
 #### 3. Erro de dependências
 ```bash
 # Reinstalar dependências
-pip uninstall -r requirements.txt -y
-pip install -r requirements.txt
+pip install -e . --force-reinstall
 
 # Ou com uv
 uv sync --reinstall
