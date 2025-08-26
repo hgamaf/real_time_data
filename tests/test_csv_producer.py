@@ -6,9 +6,9 @@ from unittest.mock import Mock, patch
 import sys
 
 # Adicionar o diretório csv-monitor ao path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'csv-monitor'))
 
-from csv_monitor.csv_producer import CSVMonitor
+from csv_producer import CSVMonitor
 
 
 def test_csv_monitor_initialization():
@@ -28,7 +28,7 @@ def test_csv_monitor_initialization():
     
     try:
         # Mock do Kafka Producer
-        with patch('csv_monitor.csv_producer.Producer') as mock_producer:
+        with patch('csv_producer.Producer') as mock_producer:
             mock_producer.return_value = Mock()
             
             # Testar inicialização
@@ -58,7 +58,7 @@ def test_csv_reading():
         temp_file = f.name
     
     try:
-        with patch('csv_monitor.csv_producer.Producer') as mock_producer:
+        with patch('csv_producer.Producer') as mock_producer:
             mock_producer.return_value = Mock()
             
             monitor = CSVMonitor(temp_file, 'test-topic')
@@ -92,7 +92,7 @@ def test_kafka_message_sending():
         # Mock do Kafka Producer
         mock_producer = Mock()
         
-        with patch('csv_monitor.csv_producer.Producer', return_value=mock_producer):
+        with patch('csv_producer.Producer', return_value=mock_producer):
             monitor = CSVMonitor(temp_file, 'test-topic')
             monitor.send_all_data()
             
