@@ -2,7 +2,7 @@
 
 ![Dashboard Preview](img/dashboard_img.png)
 
-Sistema de processamento e visualização de dados em tempo real que monitora um arquivo CSV e exibe os dados em um dashboard interativo usando Streamlit.
+Sistema completo de processamento e visualização de dados em tempo real que monitora um arquivo CSV, processa via Kafka e exibe os dados em um dashboard interativo usando Streamlit.
 
 ## 🎯 Funcionalidades Principais
 
@@ -10,38 +10,38 @@ Sistema de processamento e visualização de dados em tempo real que monitora um
 ✅ **Tempo Real**: Atualização automática a cada 3 segundos  
 ✅ **Visualizações Ricas**: Gráficos de barras, histogramas, pizza e scatter  
 ✅ **Métricas Dinâmicas**: Valor total, médio, contadores e estatísticas  
-✅ **Fácil de Usar**: Adicione dados no CSV e veja as mudanças instantaneamente  
+✅ **Kafka Integration**: Processamento de dados via Apache Kafka  
+✅ **UI do Kafka**: Interface web para monitorar tópicos e mensagens (AKHQ)  
+✅ **Fácil de Usar**: Adicione dados no CSV ou via UI e veja as mudanças instantaneamente  
 
 ## 🚀 Início Rápido
 
-### Método Simples (Recomendado)
+### Método Completo (Recomendado)
 ```bash
-# 1. Instalar UV (se não tiver)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# 1. Iniciar infraestrutura Kafka
+docker-compose up -d
 
-# 2. Criar ambiente e instalar dependências
-cd real_time_data
-uv sync
+# 2. Executar o producer CSV
+python csv-monitor/csv_producer.py
 
-# 3. Executar dashboard
-cd streamlit
-uv run streamlit run dashboard.py
+# 3. Executar dashboard (novo terminal)
+python streamlit/dashboard.py
 
-# 4. Abrir no navegador
-# http://localhost:8501
-
-# 5. Testar adicionando dados
-echo "8,Roberto,45,Fortaleza,275.50" >> data/input.csv
+# 4. Acessar interfaces
+# Dashboard: http://localhost:8501
+# Kafka UI: http://localhost:8080
 ```
 
-### Método Completo (com Kafka)
+### Método Simples (Apenas Dashboard)
 ```bash
-# 1. Iniciar infraestrutura
-uv run python start.py
+# 1. Executar apenas o dashboard
+python streamlit/dashboard.py
 
-# 2. Executar componentes
-cd csv-monitor && uv run python csv_producer.py  # Terminal 1
-cd streamlit && uv run streamlit run dashboard.py  # Terminal 2
+# 2. Abrir no navegador
+# http://localhost:8501
+
+# 3. Testar adicionando dados
+echo "8,Roberto,45,Fortaleza,275.50" >> data/input.csv
 ```
 
 ## 📊 Dashboard Features
@@ -65,29 +65,36 @@ cd streamlit && uv run streamlit run dashboard.py  # Terminal 2
 
 ## 🏗️ Arquitetura
 
+### Arquitetura Completa (Atual)
 ```
-📁 CSV File → 🔍 Monitor → 📊 Dashboard
-    ↓              ↓           ↓
-data/input.csv → Python → Streamlit Web UI
+📁 CSV File → 🔍 CSV Monitor → 📡 Kafka → 📊 Dashboard
+    ↓              ↓              ↓         ↓
+data/input.csv → csv_producer.py → Topic → Streamlit
+                                    ↓
+                              🖥️ AKHQ UI (Kafka Management)
 ```
 
-**Arquitetura Avançada (Opcional):**
-```
-📁 CSV → 🔍 Monitor → 📡 Kafka → 🔄 Flink → 📊 Dashboard
-```
+### Fluxo de Dados
+1. **CSV Monitor** detecta mudanças no arquivo `data/input.csv`
+2. **Producer** envia dados para o tópico Kafka `csv-data`
+3. **Dashboard** consome dados do Kafka em tempo real
+4. **AKHQ UI** permite monitorar e inserir dados manualmente
 
 ## 📁 Estrutura do Projeto
 
 ```
 real_time_data/
 ├── 📂 streamlit/           # Dashboard principal
-│   └── dashboard.py        # Interface web
+│   └── dashboard.py        # Interface web Streamlit
+├── 📂 csv-monitor/         # Monitor e Producer Kafka
+│   └── csv_producer.py     # Monitora CSV e envia para Kafka
 ├── 📂 data/               # Dados de entrada  
-│   └── input.csv          # Arquivo monitorado
-├── 📂 csv-monitor/        # Monitor Kafka (opcional)
-├── 🐳 docker-compose.yml  # Infraestrutura
-├── 📖 DOCUMENTATION.md    # Documentação completa
-└── 🚀 QUICK_START.md      # Guia rápido
+│   └── input.csv          # Arquivo CSV monitorado
+├── 📂 img/                # Imagens da documentação
+│   └── dashboard_img.png   # Preview do dashboard
+├── 🐳 docker-compose.yml  # Infraestrutura (Kafka, Zookeeper, AKHQ)
+├── 📄 pyproject.toml      # Dependências Python
+└── 📖 README.md           # Esta documentação
 ```
 
 ## 🔧 Configuração
@@ -96,30 +103,96 @@ real_time_data/
 ```csv
 id,nome,idade,cidade,valor
 1,João,25,São Paulo,100.50
-2,Maria,30,Rio de Janeiro,200.75
+2,Maria,30,Rio de Janeir`o,200.75
 ```
 
-### Serviços (Modo Completo)
-- **Streamlit**: http://localhost:8501
-- **Kafka**: localhost:9092  
-- **Flink**: http://localhost:8081
+### Serviços Disponíveis
+- **Dashboard Streamlit**: http://localhost:8501
+- **Kafka UI (AKHQ)**: http://localhost:8080
+- **Kafka Broker**: localhost:9092  
 - **Zookeeper**: localhost:2181
+
+### Como Inserir Dados
+
+#### Via CSV (Automático)
+```bash
+# Adicionar nova linha no CSV
+echo "11,Fernanda,29,Fortaleza,680.90" >> data/input.csv
+```
+
+#### Via Kafka UI
+1. Acesse http://localhost:8080
+2. Clique em "Topics" → "csv-data"
+3. Clique em "Produce to topic"
+4. Use este formato JSON:
+```json
+{
+  "id": 200,
+  "nome": "Novo Usuario",
+  "idade": 28,
+  "cidade": "Recife",
+  "valor": 450.00,
+  "timestamp": "2025-08-26T19:47:00"
+}
+```
+
+#### Via Script Python
+```bash
+python scripts/send_test_data.py
+```
 
 ## 🛠️ Tecnologias
 
+### Backend & Processamento
 - **Python 3.12+**: Linguagem principal
-- **UV**: Gerenciador de dependências e ambiente virtual
+- **Apache Kafka**: Message broker para streaming de dados
+- **Confluent Kafka Python**: Cliente Kafka para Python
+- **Pandas**: Manipulação e análise de dados
+
+### Frontend & Visualização
 - **Streamlit**: Framework web para dashboards
-- **Plotly**: Gráficos interativos
-- **Pandas**: Manipulação de dados
-- **Apache Kafka**: Message broker (opcional)
-- **Docker**: Containerização
+- **Plotly**: Gráficos interativos e responsivos
+- **AKHQ**: Interface web para gerenciamento do Kafka
 
-## 📖 Documentação
+### Infraestrutura
+- **Docker & Docker Compose**: Containerização e orquestração
+- **Apache Zookeeper**: Coordenação de serviços Kafka
+- **UV**: Gerenciador de dependências Python moderno
 
-- 📖 **[Documentação Completa](DOCUMENTATION.md)**: Guia detalhado
-- 🚀 **[Quick Start](QUICK_START.md)**: Início em 5 minutos
-- 🐛 **[Troubleshooting](DOCUMENTATION.md#-troubleshooting)**: Soluções para problemas
+## 🔧 Pré-requisitos
+
+- **Docker & Docker Compose**: Para executar Kafka e serviços
+- **Python 3.12+**: Para executar os scripts
+- **UV** (opcional): Para gerenciamento de dependências
+
+### Instalação do UV
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Ou via pip
+pip install uv
+```
+
+## 🐛 Troubleshooting
+
+### Kafka não conecta
+```bash
+# Verificar se containers estão rodando
+docker ps
+
+# Reiniciar serviços
+docker-compose restart
+
+# Ver logs
+docker logs kafka
+docker logs akhq
+```
+
+### Dashboard não atualiza
+- Verifique se o CSV producer está rodando
+- Confirme se há dados no tópico Kafka via AKHQ UI
+- Reinicie o dashboard Streamlit
 
 ## 🎯 Casos de Uso
 
@@ -146,6 +219,22 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para detalhes.
 
 ## 🎉 Resultado Final
 
-![Dashboard Preview](https://via.placeholder.com/800x400/1f77b4/ffffff?text=Dashboard+Real-Time+CSV)
+### Interfaces Disponíveis
 
-**🚀 Sistema completo funcionando com visualizações em tempo real!**
+1. **📊 Dashboard Streamlit** (http://localhost:8501)
+   - Visualizações em tempo real
+   - Métricas dinâmicas
+   - Gráficos interativos
+
+2. **🖥️ Kafka UI - AKHQ** (http://localhost:8080)
+   - Monitoramento de tópicos
+   - Inserção manual de dados
+   - Visualização de mensagens
+
+### Status do Sistema
+✅ **Kafka**: Processamento de streaming  
+✅ **Dashboard**: Visualização em tempo real  
+✅ **CSV Monitor**: Detecção automática de mudanças  
+✅ **UI Management**: Interface para gerenciar dados  
+
+**🚀 Sistema completo de streaming de dados funcionando!**

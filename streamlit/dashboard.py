@@ -2,34 +2,103 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import time
-import os
+import json
 from datetime import datetime
+from confluent_kafka import Consumer, KafkaError
 
 # Configuração da página
 st.set_page_config(
-    page_title="Dashboard Real-Time CSV", 
+    page_title="Dashboard Real-Time Kafka", 
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Caminho do arquivo CSV
-CSV_FILE = "../data/input.csv"
+# Configuração do Kafka Consumer
+KAFKA_CONFIG = {
+    'bootstrap.servers': 'localhost:9092',
+    'group.id': 'dashboard-consumer',
+    'auto.offset.reset': 'earliest',
+    'enable.auto.commit': True,
+    'session.timeout.ms': 6000,
+    'heartbeat.interval.ms': 3000
+}
 
-def load_csv_data():
-    """Carrega dados do arquivo CSV"""
+@st.cache_resource
+def get_kafka_consumer():
+    """Cria e retorna um consumer Kafka"""
     try:
-        if os.path.exists(CSV_FILE):
-            df = pd.read_csv(CSV_FILE)
-            df['timestamp_load'] = datetime.now().strftime("%H:%M:%S")
-            return df
-        else:
-            return pd.DataFrame()
+        consumer = Consumer(KAFKA_CONFIG)
+        consumer.subscribe(['csv-data'])
+        return consumer
     except Exception as e:
-        st.error(f"Erro ao ler CSV: {e}")
+        st.error(f"Erro ao conectar com Kafka: {e}")
+        return None
+
+def load_kafka_data():
+    """Carrega dados do Kafka"""
+    consumer = get_kafka_consumer()
+    if not consumer:
+        return pd.DataFrame()
+    
+    messages = []
+    try:
+        # Consumir mensagens disponíveis (timeout de 1 segundo)
+        while True:
+            msg = consumer.poll(timeout=1.0)
+            if msg is None:
+                break
+            if msg.error():
+                if msg.error().code() == KafkaError._PARTITION_EOF:
+                    continue
+                else:
+                    st.error(f"Erro no consumer: {msg.error()}")
+                    break
+            
+            # Decodificar mensagem JSON
+            try:
+                data = json.loads(msg.value().decode('utf-8'))
+                messages.append(data)
+            except json.JSONDecodeError as e:
+                st.warning(f"Erro ao decodificar mensagem: {e}")
+                continue
+                
+    except Exception as e:
+        st.error(f"Erro ao consumir do Kafka: {e}")
+    
+    # Converter para DataFrame
+    if messages:
+        df = pd.DataFrame(messages)
+        # Remover duplicatas baseado no ID (manter a mais recente)
+        if 'id' in df.columns:
+            df = df.drop_duplicates(subset=['id'], keep='last')
+        df['timestamp_load'] = datetime.now().strftime("%H:%M:%S")
+        return df
+    else:
         return pd.DataFrame()
 
+# Armazenar dados no session state para persistência
+if 'kafka_data' not in st.session_state:
+    st.session_state.kafka_data = pd.DataFrame()
+
+def update_data():
+    """Atualiza dados do Kafka e merge com dados existentes"""
+    new_data = load_kafka_data()
+    
+    if not new_data.empty:
+        if st.session_state.kafka_data.empty:
+            st.session_state.kafka_data = new_data
+        else:
+            # Combinar dados novos com existentes
+            combined = pd.concat([st.session_state.kafka_data, new_data], ignore_index=True)
+            # Remover duplicatas baseado no ID (manter a mais recente)
+            if 'id' in combined.columns:
+                combined = combined.drop_duplicates(subset=['id'], keep='last')
+            st.session_state.kafka_data = combined
+    
+    return st.session_state.kafka_data
+
 def main():
-    st.title("🎯 Dashboard Real-Time - Dados CSV")
+    st.title("🎯 Dashboard Real-Time - Kafka Stream")
     st.markdown("---")
     
     # Controles
@@ -37,16 +106,21 @@ def main():
     
     with col1:
         if st.button("🔄 Atualizar Dados", type="primary"):
+            update_data()
             st.rerun()
     
     with col2:
         auto_refresh = st.checkbox("🔄 Auto-refresh (3s)", value=True)
     
     with col3:
-        st.markdown(f"**📁 Arquivo:** `{CSV_FILE}`")
+        consumer = get_kafka_consumer()
+        if consumer:
+            st.markdown("**📡 Status:** 🟢 Conectado ao Kafka")
+        else:
+            st.markdown("**📡 Status:** 🔴 Desconectado do Kafka")
     
-    # Carregar dados
-    df = load_csv_data()
+    # Carregar dados do Kafka
+    df = update_data()
     
     if not df.empty:
         # Métricas principais
@@ -163,31 +237,33 @@ def main():
         
         st.dataframe(city_stats, use_container_width=True)
         
-        # Informações do arquivo
-        st.subheader("📄 Informações do Arquivo")
+        # Informações do Kafka
+        st.subheader("📡 Informações do Stream")
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            if os.path.exists(CSV_FILE):
-                mod_time = os.path.getmtime(CSV_FILE)
-                mod_time_str = datetime.fromtimestamp(mod_time).strftime("%d/%m/%Y %H:%M:%S")
-                st.info(f"**Última modificação:** {mod_time_str}")
+            st.info(f"**Tópico Kafka:** csv-data")
         
         with col2:
-            st.info(f"**Total de linhas:** {len(df)}")
+            st.info(f"**Total de registros:** {len(df)}")
         
         with col3:
-            st.info(f"**Atualizado em:** {datetime.now().strftime('%H:%M:%S')}")
+            st.info(f"**Última atualização:** {datetime.now().strftime('%H:%M:%S')}")
         
     else:
-        st.warning("📭 Nenhum dado encontrado no arquivo CSV.")
-        st.markdown(f"""
+        st.warning("📭 Nenhum dado encontrado no stream Kafka.")
+        st.markdown("""
         ### 📝 Como adicionar dados:
-        1. Abra o arquivo: `{CSV_FILE}`
-        2. Adicione uma nova linha no formato: `id,nome,idade,cidade,valor`
-        3. Exemplo: `8,Roberto,45,Fortaleza,275.50`
-        4. Salve o arquivo
-        5. O dashboard será atualizado automaticamente
+        1. Certifique-se de que o Kafka está rodando: `docker-compose up -d`
+        2. Execute o CSV Producer: `cd csv-monitor && uv run python csv_producer.py`
+        3. Adicione dados no arquivo CSV: `echo "8,Roberto,45,Fortaleza,275.50" >> data/input.csv`
+        4. Os dados serão enviados para o Kafka automaticamente
+        5. O dashboard consumirá do Kafka em tempo real
+        
+        ### 🔍 Monitoramento:
+        - **Kafka UI**: http://localhost:8080
+        - **Tópico**: csv-data
+        - **Consumer Group**: dashboard-consumer
         """)
     
     # Auto-refresh
