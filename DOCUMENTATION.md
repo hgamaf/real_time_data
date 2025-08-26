@@ -1,5 +1,7 @@
 # 📊 Real-Time Data Processing System - Documentação Completa
 
+![Dashboard Preview](img/dashboard_img.png)
+
 ## 🎯 Visão Geral
 
 Sistema de processamento e visualização de dados em tempo real que monitora um arquivo CSV e exibe os dados em um dashboard interativo usando Streamlit. O sistema detecta automaticamente mudanças no arquivo CSV e atualiza o dashboard em tempo real.
