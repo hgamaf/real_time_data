@@ -7,3 +7,4 @@ id,nome,idade,cidade,valor
 6,Henrique,35,Campina Grande,1000.00
 7, Maria, 12, Boa Vista, 500.00
 8, Nathalia, 23, Pouso Alegre, 1200.01
+9, teste_bizarro, 99, Bug, 9999.01

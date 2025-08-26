@@ -14,28 +14,32 @@ Sistema de processamento e visualização de dados em tempo real que monitora um
 
 ### Método Simples (Recomendado)
 ```bash
-# 1. Instalar dependências
-pip install streamlit plotly pandas
+# 1. Instalar UV (se não tiver)
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 2. Executar dashboard
+# 2. Criar ambiente e instalar dependências
+cd real_time_data
+uv sync
+
+# 3. Executar dashboard
 cd streamlit
-streamlit run dashboard.py
+uv run streamlit run dashboard.py
 
-# 3. Abrir no navegador
+# 4. Abrir no navegador
 # http://localhost:8501
 
-# 4. Testar adicionando dados
+# 5. Testar adicionando dados
 echo "8,Roberto,45,Fortaleza,275.50" >> data/input.csv
 ```
 
 ### Método Completo (com Kafka)
 ```bash
 # 1. Iniciar infraestrutura
-python start.py
+uv run python start.py
 
 # 2. Executar componentes
-cd csv-monitor && python csv_producer.py  # Terminal 1
-cd streamlit && streamlit run dashboard.py  # Terminal 2
+cd csv-monitor && uv run python csv_producer.py  # Terminal 1
+cd streamlit && uv run streamlit run dashboard.py  # Terminal 2
 ```
 
 ## 📊 Dashboard Features
@@ -102,6 +106,7 @@ id,nome,idade,cidade,valor
 ## 🛠️ Tecnologias
 
 - **Python 3.12+**: Linguagem principal
+- **UV**: Gerenciador de dependências e ambiente virtual
 - **Streamlit**: Framework web para dashboards
 - **Plotly**: Gráficos interativos
 - **Pandas**: Manipulação de dados

@@ -150,6 +150,9 @@ def generate_sales_data(n_records=50):
 
 if __name__ == "__main__":
     generate_sales_data()
+
+# Para executar:
+# uv run python generate_test_data.py
 ```
 
 ### Simulador de Dados em Tempo Real
@@ -184,6 +187,9 @@ def add_random_sale():
 while True:
     add_random_sale()
     time.sleep(10)
+
+# Para executar:
+# uv run python simulate_realtime.py
 ```
 
 ## 🎨 Customizações Visuais

@@ -7,18 +7,26 @@
 # Verificar se tem Python 3.12+ e Docker
 python --version
 docker --version
+
+# Instalar UV (se não tiver)
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### 2. Instalar Dependências
+### 2. Criar Ambiente e Instalar Dependências
 ```bash
 cd real_time_data
-pip install -e .
+
+# Criar ambiente virtual e instalar dependências
+uv sync
+
+# Ativar ambiente virtual
+source .venv/bin/activate
 ```
 
 ### 3. Iniciar Dashboard
 ```bash
 cd streamlit
-streamlit run dashboard.py
+uv run streamlit run dashboard.py
 ```
 
 ### 4. Abrir no Navegador
@@ -53,7 +61,7 @@ echo "8,Roberto,45,Fortaleza,275.50" >> data/input.csv
 Ctrl+C
 
 # Reiniciar Dashboard
-streamlit run dashboard.py
+uv run streamlit run dashboard.py
 
 # Adicionar dados de teste
 echo "9,Ana,32,Recife,180.25" >> data/input.csv

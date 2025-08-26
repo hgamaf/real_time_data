@@ -74,26 +74,32 @@ real_time_data/
 python --version    # Python 3.12+
 docker --version    # Docker 20.0+
 docker-compose --version  # Docker Compose 2.0+
+
+# Instalar UV (gerenciador de dependências Python)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# Ou no macOS: brew install uv
+# Ou no Windows: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-### 1. Clonar e Configurar o Projeto
+### 1. Configurar Ambiente Python
 
 ```bash
 # Navegar para o diretório do projeto
 cd real_time_data
 
-# Instalar dependências
-pip install -e .
-
-# Ou usando uv (recomendado)
+# Criar ambiente virtual e instalar dependências automaticamente
 uv sync
+
+# Ativar ambiente virtual
+source .venv/bin/activate  # Linux/macOS
+# .venv\Scripts\activate   # Windows
 ```
 
 ### 2. Iniciar a Infraestrutura
 
 ```bash
 # Método 1: Script automatizado (recomendado)
-python start.py
+uv run python start.py
 
 # Método 2: Docker Compose manual
 docker-compose up -d
@@ -120,16 +126,19 @@ docker-compose logs kafka
 ### 1. Iniciar o Sistema Completo
 
 ```bash
+# Ativar ambiente virtual (se não estiver ativo)
+source .venv/bin/activate
+
 # Terminal 1: Infraestrutura (se não estiver rodando)
-python start.py
+uv run python start.py
 
 # Terminal 2: Dashboard Streamlit
 cd streamlit
-streamlit run dashboard.py
+uv run streamlit run dashboard.py
 
 # Terminal 3: CSV Monitor (opcional - para Kafka)
 cd csv-monitor
-python csv_producer.py
+uv run python csv_producer.py
 ```
 
 ### 2. Acessar o Dashboard
@@ -229,7 +238,7 @@ chmod 644 data/input.csv
 
 # Reiniciar Streamlit
 pkill -f streamlit
-cd streamlit && streamlit run dashboard.py
+cd streamlit && uv run streamlit run dashboard.py
 ```
 
 #### 2. Kafka não conecta
@@ -247,10 +256,11 @@ docker-compose logs kafka
 #### 3. Erro de dependências
 ```bash
 # Reinstalar dependências
-pip install -e . --force-reinstall
-
-# Ou com uv
 uv sync --reinstall
+
+# Ou limpar cache e reinstalar
+uv cache clean
+uv sync
 ```
 
 #### 4. Porta já em uso
@@ -262,7 +272,7 @@ lsof -ti:8501
 kill $(lsof -ti:8501)
 
 # Usar porta alternativa
-streamlit run dashboard.py --server.port 8502
+uv run streamlit run dashboard.py --server.port 8502
 ```
 
 #### 5. Arquivo CSV corrompido
@@ -309,10 +319,11 @@ docker exec kafka kafka-topics --list --bootstrap-server localhost:9092
 - ✅ Monitorar logs regularmente
 
 ### Boas Práticas de Desenvolvimento
-- ✅ Usar ambiente virtual Python
-- ✅ Manter dependências atualizadas
+- ✅ Usar UV para gerenciamento de dependências e ambiente virtual
+- ✅ Manter dependências atualizadas com `uv sync --upgrade`
 - ✅ Fazer backup dos dados regularmente
 - ✅ Documentar mudanças no código
+- ✅ Usar `uv run` para executar comandos no ambiente virtual
 
 ## 🚀 Extensões e Melhorias Futuras
 
