@@ -11,33 +11,69 @@ Sistema completo de processamento e visualização de dados em tempo real que mo
 ✅ **Visualizações Ricas**: Gráficos de barras, histogramas, pizza e scatter  
 ✅ **Métricas Dinâmicas**: Valor total, médio, contadores e estatísticas  
 ✅ **Kafka Integration**: Processamento de dados via Apache Kafka  
-✅ **UI do Kafka**: Interface web para monitorar tópicos e mensagens (AKHQ)  
+✅ **UI do Kafka**: Interface web moderna para monitorar tópicos e mensagens (Kafka UI)  
 ✅ **Sincronização Completa**: Remoção de dados do CSV reflete no dashboard  
 ✅ **Testes Automatizados**: Bateria completa de testes com pytest  
+✅ **100% Open Source**: Migrado para `kafka-python` (sem dependências proprietárias)  
 ✅ **Fácil de Usar**: Adicione/remova dados no CSV ou via UI e veja as mudanças instantaneamente  
 
 ## 🚀 Início Rápido
 
-### Método Completo (Recomendado)
+### Pré-requisitos
+- **Docker & Docker Compose**: Para executar Kafka e serviços
+- **Python 3.12+**: Para executar os scripts
+- **UV**: Gerenciador de dependências Python moderno
+
+### Instalação do UV
 ```bash
-# 1. Iniciar infraestrutura Kafka
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Ou via pip
+pip install uv
+
+# Verificar instalação
+uv --version
+```
+
+### Setup do Projeto
+```bash
+# 1. Clonar/navegar para o diretório do projeto
+cd real_time_data
+
+# 2. Criar ambiente virtual e instalar dependências
+uv sync
+
+# 3. Verificar se dependências foram instaladas
+uv run python --version
+uv run pip list
+```
+
+### Executar o Sistema Completo
+```bash
+# Terminal 1: Iniciar infraestrutura Kafka
 docker-compose up -d
 
-# 2. Executar o producer CSV
-python csv-monitor/csv_producer.py
+# Aguardar 60-90 segundos para Kafka inicializar completamente
 
-# 3. Executar dashboard (novo terminal)
-python streamlit/dashboard.py
+# Terminal 2: Executar o producer CSV
+cd real_time_data
+uv run python csv-monitor/csv_producer.py
 
-# 4. Acessar interfaces
-# Dashboard: http://localhost:8501
-# Kafka UI: http://localhost:8080
+# Terminal 3: Executar dashboard
+cd real_time_data
+uv run streamlit run streamlit/dashboard.py
+
+# Acessar interfaces:
+# 📊 Dashboard: http://localhost:8501
+# 🖥️ Kafka UI: http://localhost:8081
 ```
 
 ### Método Simples (Apenas Dashboard)
 ```bash
 # 1. Executar apenas o dashboard
-python streamlit/dashboard.py
+cd real_time_data
+uv run streamlit run streamlit/dashboard.py
 
 # 2. Abrir no navegador
 # http://localhost:8501
@@ -74,14 +110,26 @@ echo "8,Roberto,45,Fortaleza,275.50" >> data/input.csv
     ↓              ↓              ↓         ↓
 data/input.csv → csv_producer.py → Topic → Streamlit
                                     ↓
-                              🖥️ AKHQ UI (Kafka Management)
+                              🖥️ Kafka UI (Management)
 ```
 
 ### Fluxo de Dados
 1. **CSV Monitor** detecta mudanças no arquivo `data/input.csv`
-2. **Producer** envia dados para o tópico Kafka `csv-data`
-3. **Dashboard** consome dados do Kafka em tempo real
-4. **AKHQ UI** permite monitorar e inserir dados manualmente
+2. **Producer** envia dados para o tópico Kafka `csv-data` usando `kafka-python`
+3. **Dashboard** consome dados do Kafka em tempo real usando `KafkaConsumer`
+4. **Kafka UI** permite monitorar tópicos e inserir dados manualmente
+5. **Reset Automático**: Quando dados são removidos do CSV, envia comando de reset
+
+### Stack Tecnológica
+```
+Frontend:     Streamlit + Plotly
+Backend:      Python 3.12 + kafka-python
+Streaming:    Apache Kafka + Zookeeper
+Management:   Kafka UI (Provectus)
+Infra:        Docker Compose
+Testing:      pytest + Mock
+Dependencies: UV (Python package manager)
+```
 
 ## 📁 Estrutura do Projeto
 
@@ -116,7 +164,7 @@ id,nome,idade,cidade,valor
 
 ### Serviços Disponíveis
 - **Dashboard Streamlit**: http://localhost:8501
-- **Kafka UI (AKHQ)**: http://localhost:8080
+- **Kafka UI**: http://localhost:8081
 - **Kafka Broker**: localhost:9092  
 - **Zookeeper**: localhost:2181
 
@@ -127,14 +175,14 @@ id,nome,idade,cidade,valor
 # Adicionar nova linha no CSV
 echo "11,Fernanda,29,Fortaleza,680.90" >> data/input.csv
 
-# Remover dados (editar arquivo)
+# Remover dados (editar arquivo manualmente)
 # O dashboard será automaticamente atualizado para refletir as mudanças
 ```
 
 #### Via Kafka UI
-1. Acesse http://localhost:8080
+1. Acesse http://localhost:8081
 2. Clique em "Topics" → "csv-data"
-3. Clique em "Produce to topic"
+3. Clique em "Produce Message"
 4. Use este formato JSON:
 ```json
 {
@@ -143,7 +191,7 @@ echo "11,Fernanda,29,Fortaleza,680.90" >> data/input.csv
   "idade": 28,
   "cidade": "Recife",
   "valor": 450.00,
-  "timestamp": "2025-08-26T19:47:00"
+  "timestamp": "2025-08-27T12:00:00"
 }
 ```
 
@@ -183,32 +231,34 @@ uv run pytest tests/test_integration.py -v
 ### Backend & Processamento
 - **Python 3.12+**: Linguagem principal
 - **Apache Kafka**: Message broker para streaming de dados
-- **Confluent Kafka Python**: Cliente Kafka para Python
+- **kafka-python**: Cliente Kafka 100% open-source para Python
 - **Pandas**: Manipulação e análise de dados
 
 ### Frontend & Visualização
 - **Streamlit**: Framework web para dashboards
 - **Plotly**: Gráficos interativos e responsivos
-- **AKHQ**: Interface web para gerenciamento do Kafka
+- **Kafka UI (Provectus)**: Interface web moderna para gerenciamento do Kafka
 
 ### Infraestrutura
 - **Docker & Docker Compose**: Containerização e orquestração
 - **Apache Zookeeper**: Coordenação de serviços Kafka
 - **UV**: Gerenciador de dependências Python moderno
 
-## 🔧 Pré-requisitos
+### Dependências Python (pyproject.toml)
+```toml
+[project]
+dependencies = [
+    "streamlit>=1.39.0",
+    "pandas>=2.2.3",
+    "plotly>=5.24.1",
+    "kafka-python>=2.0.2"
+]
 
-- **Docker & Docker Compose**: Para executar Kafka e serviços
-- **Python 3.12+**: Para executar os scripts
-- **UV** (opcional): Para gerenciamento de dependências
-
-### Instalação do UV
-```bash
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Ou via pip
-pip install uv
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.4.1",
+    "pytest-mock>=3.14.0"
+]
 ```
 
 ## 🐛 Troubleshooting
@@ -218,22 +268,52 @@ pip install uv
 # Verificar se containers estão rodando
 docker ps
 
+# Ver logs dos serviços
+docker logs kafka
+docker logs kafka-ui
+docker logs zookeeper
+
 # Reiniciar serviços
 docker-compose restart
 
-# Ver logs
+# Limpar e reiniciar tudo
+docker-compose down --remove-orphans
+docker-compose up -d
+```
+
+### Clusters offline na Kafka UI
+```bash
+# Aguardar mais tempo para Kafka inicializar (60-90s)
 docker logs kafka
-docker logs akhq
+
+# Verificar se Kafka está respondendo
+telnet localhost 9092
+
+# Se necessário, reiniciar
+docker-compose restart kafka
 ```
 
 ### Dashboard não atualiza
-- Verifique se o CSV producer está rodando
-- Confirme se há dados no tópico Kafka via AKHQ UI
+- Verifique se o CSV producer está rodando com `uv run`
+- Confirme se há dados no tópico Kafka via Kafka UI (http://localhost:8081)
 - Use o botão "🗑️ Limpar Cache" no dashboard
-- Reinicie o dashboard Streamlit
+- Reinicie o dashboard: `uv run streamlit run streamlit/dashboard.py`
+
+### Erro de dependências Python
+```bash
+# Reinstalar dependências
+uv sync --reinstall
+
+# Verificar ambiente virtual
+uv run python --version
+uv run pip list
+
+# Se usar Python global, sempre use uv run
+uv run python csv-monitor/csv_producer.py
+```
 
 ### Dados removidos do CSV não somem do dashboard
-- O sistema agora envia comandos de reset automaticamente
+- O sistema envia comandos de reset automaticamente
 - Use o botão "🗑️ Limpar Cache" se necessário
 - Verifique se o CSV producer detectou a mudança no arquivo
 
@@ -244,6 +324,17 @@ uv sync
 
 # Executar testes individualmente
 uv run pytest tests/test_csv_producer.py -v -s
+
+# Executar todos os testes
+uv run pytest tests/ -v
+```
+
+### Porta já em uso
+```bash
+# Se porta 8081 estiver ocupada
+docker-compose down
+sudo lsof -i :8081
+# Matar processo ou alterar porta no docker-compose.yml
 ```
 
 ## 🎯 Casos de Uso
@@ -277,24 +368,78 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para detalhes.
    - Visualizações em tempo real
    - Métricas dinâmicas
    - Gráficos interativos
+   - Controle de cache
 
-2. **🖥️ Kafka UI - AKHQ** (http://localhost:8080)
-   - Monitoramento de tópicos
+2. **🖥️ Kafka UI** (http://localhost:8081)
+   - Monitoramento de tópicos e clusters
    - Inserção manual de dados
    - Visualização de mensagens
+   - Interface moderna e responsiva
 
 ### Status do Sistema
-✅ **Kafka**: Processamento de streaming  
-✅ **Dashboard**: Visualização em tempo real  
-✅ **CSV Monitor**: Detecção automática de mudanças  
+✅ **Kafka**: Processamento de streaming com `kafka-python`  
+✅ **Dashboard**: Visualização em tempo real com Streamlit  
+✅ **CSV Monitor**: Detecção automática de mudanças no arquivo  
 ✅ **Sincronização**: Remoção de dados reflete no dashboard  
-✅ **UI Management**: Interface para gerenciar dados  
-✅ **Testes**: Bateria completa de testes automatizados  
+✅ **UI Management**: Interface moderna para gerenciar dados  
+✅ **Testes**: Bateria completa de 9 testes automatizados  
+✅ **100% Open Source**: Sem dependências proprietárias  
 
 ### Funcionalidades Avançadas
 - 🔄 **Reset Automático**: Quando dados são removidos do CSV, o dashboard é limpo automaticamente
 - 🧪 **Testes Completos**: 9 testes cobrindo todas as funcionalidades principais
 - 🗑️ **Controle Manual**: Botão para limpar cache quando necessário
 - 📊 **Métricas Precisas**: Cálculos com tratamento de precisão decimal
+- ⚡ **Performance**: Migração para `kafka-python` melhorou a performance
+- 🔧 **UV Integration**: Gerenciamento moderno de dependências
+
+## 📋 Comandos Úteis
+
+### Desenvolvimento
+```bash
+# Setup inicial
+uv sync
+
+# Executar testes
+uv run pytest tests/ -v
+
+# Executar com cobertura
+uv add pytest-cov --dev
+uv run pytest tests/ --cov=. --cov-report=html
+
+# Adicionar nova dependência
+uv add nome-da-biblioteca
+
+# Atualizar dependências
+uv sync --upgrade
+```
+
+### Docker
+```bash
+# Subir serviços
+docker-compose up -d
+
+# Ver logs
+docker-compose logs -f
+
+# Parar serviços
+docker-compose down
+
+# Limpar tudo
+docker-compose down --remove-orphans
+docker system prune -f
+```
+
+### Monitoramento
+```bash
+# Ver containers rodando
+docker ps
+
+# Monitorar logs do Kafka
+docker logs -f kafka
+
+# Verificar tópicos (se kafka-tools instalado)
+docker exec kafka kafka-topics --list --bootstrap-server localhost:9092
+```
 
 **🚀 Sistema completo de streaming de dados com sincronização total funcionando!**
