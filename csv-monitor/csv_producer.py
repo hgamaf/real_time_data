@@ -1,5 +1,5 @@
 import pandas as pd
-from confluent_kafka import Producer
+from kafka import KafkaProducer
 import json
 import time
 import os
@@ -15,12 +15,14 @@ class CSVMonitor:
             raise FileNotFoundError(f"Arquivo CSV não encontrado: {csv_file}")
         
         try:
-            self.producer = Producer({
-                'bootstrap.servers': bootstrap_servers,
-                'client.id': 'csv-producer',
-                'socket.timeout.ms': 10000,
-                'message.timeout.ms': 10000
-            })
+            self.producer = KafkaProducer(
+                bootstrap_servers=[bootstrap_servers],
+                client_id='csv-producer',
+                value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+                key_serializer=lambda k: str(k).encode('utf-8'),
+                request_timeout_ms=10000,
+                retries=3
+            )
             print(f"Conectado ao Kafka em {bootstrap_servers}")
         except Exception as e:
             print(f"Erro ao conectar com Kafka: {e}")
@@ -57,12 +59,13 @@ class CSVMonitor:
             row_data['timestamp'] = datetime.now().isoformat()
             
             # Enviar para o Kafka
-            self.producer.produce(
-                self.kafka_topic, 
-                key=str(row_data['id']),  # Usar ID como chave
-                value=json.dumps(row_data).encode('utf-8')
+            future = self.producer.send(
+                self.kafka_topic,
+                key=row_data['id'],
+                value=row_data
             )
-            self.producer.flush()
+            # Aguardar confirmação
+            future.get(timeout=10)
             print(f"Enviado: {row_data}")
 
     def send_new_data(self):
@@ -78,12 +81,12 @@ class CSVMonitor:
                 'action': 'reset',
                 'timestamp': datetime.now().isoformat()
             }
-            self.producer.produce(
+            future = self.producer.send(
                 self.kafka_topic,
                 key='__reset__',
-                value=json.dumps(reset_message).encode('utf-8')
+                value=reset_message
             )
-            self.producer.flush()
+            future.get(timeout=10)
             print("Enviado comando de reset")
             
             # Limpar dados processados para reenviar tudo
@@ -104,12 +107,12 @@ class CSVMonitor:
                 row_data['action'] = 'upsert'  # Indicar que é inserção/atualização
                 
                 # Enviar para o Kafka
-                self.producer.produce(
-                    self.kafka_topic, 
-                    key=str(row_data['id']),
-                    value=json.dumps(row_data).encode('utf-8')
+                future = self.producer.send(
+                    self.kafka_topic,
+                    key=row_data['id'],
+                    value=row_data
                 )
-                self.producer.flush()
+                future.get(timeout=10)
                 print(f"Enviado: {row_data}")
                 
                 self.processed_rows.add(row_hash)

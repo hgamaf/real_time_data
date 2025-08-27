@@ -4,7 +4,8 @@ import plotly.express as px
 import time
 import json
 from datetime import datetime
-from confluent_kafka import Consumer, KafkaError
+from kafka import KafkaConsumer
+from kafka.errors import KafkaError
 
 # Configuração da página
 st.set_page_config(
@@ -15,20 +16,21 @@ st.set_page_config(
 
 # Configuração do Kafka Consumer
 KAFKA_CONFIG = {
-    'bootstrap.servers': 'localhost:9092',
-    'group.id': 'dashboard-consumer',
-    'auto.offset.reset': 'earliest',
-    'enable.auto.commit': True,
-    'session.timeout.ms': 6000,
-    'heartbeat.interval.ms': 3000
+    'bootstrap_servers': ['localhost:9092'],
+    'group_id': 'dashboard-consumer',
+    'auto_offset_reset': 'earliest',
+    'enable_auto_commit': True,
+    'session_timeout_ms': 6000,
+    'heartbeat_interval_ms': 3000,
+    'value_deserializer': lambda m: json.loads(m.decode('utf-8')),
+    'consumer_timeout_ms': 1000
 }
 
 @st.cache_resource
 def get_kafka_consumer():
     """Cria e retorna um consumer Kafka"""
     try:
-        consumer = Consumer(KAFKA_CONFIG)
-        consumer.subscribe(['csv-data'])
+        consumer = KafkaConsumer('csv-data', **KAFKA_CONFIG)
         return consumer
     except Exception as e:
         st.error(f"Erro ao conectar com Kafka: {e}")
@@ -42,28 +44,23 @@ def load_kafka_data():
     
     messages = []
     try:
-        # Consumir mensagens disponíveis (timeout de 1 segundo)
-        while True:
-            msg = consumer.poll(timeout=1.0)
-            if msg is None:
-                break
-            if msg.error():
-                if msg.error().code() == KafkaError._PARTITION_EOF:
-                    continue
-                else:
-                    st.error(f"Erro no consumer: {msg.error()}")
-                    break
-            
-            # Decodificar mensagem JSON
+        # Consumir mensagens disponíveis (timeout já configurado no consumer)
+        for message in consumer:
             try:
-                data = json.loads(msg.value().decode('utf-8'))
+                data = message.value
                 messages.append(data)
-            except json.JSONDecodeError as e:
-                st.warning(f"Erro ao decodificar mensagem: {e}")
+            except Exception as e:
+                st.warning(f"Erro ao processar mensagem: {e}")
                 continue
+            
+            # Limitar número de mensagens por poll para não travar a UI
+            if len(messages) >= 100:
+                break
                 
     except Exception as e:
-        st.error(f"Erro ao consumir do Kafka: {e}")
+        # Timeout é esperado quando não há mensagens
+        if "timeout" not in str(e).lower():
+            st.error(f"Erro ao consumir do Kafka: {e}")
     
     # Converter para DataFrame
     if messages:

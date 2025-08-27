@@ -48,7 +48,7 @@ def test_end_to_end_data_flow():
         mock_producer.produce.side_effect = capture_message
         
         # Testar envio de dados
-        with patch('csv_producer.Producer', return_value=mock_producer):
+        with patch('csv_producer.KafkaProducer', return_value=mock_producer):
             monitor = CSVMonitor(temp_file, 'csv-data')
             monitor.send_all_data()
             
@@ -83,7 +83,7 @@ def test_kafka_connection_error_handling():
     
     try:
         # Simular erro de conexão
-        with patch('csv_producer.Producer', side_effect=Exception("Connection failed")):
+        with patch('csv_producer.KafkaProducer', side_effect=Exception("Connection failed")):
             with pytest.raises(Exception) as exc_info:
                 CSVMonitor(temp_file, 'test-topic')
             
@@ -111,7 +111,7 @@ def test_csv_file_monitoring():
     try:
         mock_producer = Mock()
         
-        with patch('csv_producer.Producer', return_value=mock_producer):
+        with patch('csv_producer.KafkaProducer', return_value=mock_producer):
             monitor = CSVMonitor(temp_file, 'test-topic')
             
             # Primeira execução - deve processar dados existentes

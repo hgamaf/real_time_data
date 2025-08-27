@@ -28,8 +28,9 @@ def test_csv_monitor_initialization():
     
     try:
         # Mock do Kafka Producer
-        with patch('csv_producer.Producer') as mock_producer:
-            mock_producer.return_value = Mock()
+        with patch('csv_producer.KafkaProducer') as mock_producer:
+            mock_instance = Mock()
+            mock_producer.return_value = mock_instance
             
             # Testar inicialização
             monitor = CSVMonitor(temp_file, 'test-topic')
@@ -58,8 +59,9 @@ def test_csv_reading():
         temp_file = f.name
     
     try:
-        with patch('csv_producer.Producer') as mock_producer:
-            mock_producer.return_value = Mock()
+        with patch('csv_producer.KafkaProducer') as mock_producer:
+            mock_instance = Mock()
+            mock_producer.return_value = mock_instance
             
             monitor = CSVMonitor(temp_file, 'test-topic')
             df = monitor.read_csv()
@@ -91,17 +93,19 @@ def test_kafka_message_sending():
     try:
         # Mock do Kafka Producer
         mock_producer = Mock()
+        mock_future = Mock()
+        mock_future.get.return_value = None
+        mock_producer.send.return_value = mock_future
         
-        with patch('csv_producer.Producer', return_value=mock_producer):
+        with patch('csv_producer.KafkaProducer', return_value=mock_producer):
             monitor = CSVMonitor(temp_file, 'test-topic')
             monitor.send_all_data()
             
-            # Verificar se produce foi chamado
-            assert mock_producer.produce.called
-            assert mock_producer.flush.called
+            # Verificar se send foi chamado
+            assert mock_producer.send.called
             
             # Verificar argumentos da chamada
-            call_args = mock_producer.produce.call_args
+            call_args = mock_producer.send.call_args
             assert call_args[0][0] == 'test-topic'  # Tópico correto
             
     finally:
