@@ -36,20 +36,57 @@ pip install uv
 uv --version
 ```
 
-### Setup do Projeto
+### Setup Completo do Projeto
+
+#### 1. Clonar o Repositório
 ```bash
-# 1. Clonar/navegar para o diretório do projeto
+# Clonar o repositório (substitua pela URL real)
+git clone <URL_DO_REPOSITORIO>
 cd real_time_data
 
-# 2. Criar ambiente virtual e instalar dependências
+# Ou se já tem o código localmente
+cd caminho/para/real_time_data
+```
+
+#### 2. Criar e Configurar Ambiente Virtual
+```bash
+# Criar ambiente virtual e instalar dependências automaticamente
 uv sync
 
-# 3. Verificar se dependências foram instaladas
+# Isso vai:
+# - Criar .venv/ no diretório do projeto
+# - Instalar Python 3.12+ se necessário
+# - Instalar todas as dependências do pyproject.toml
+```
+
+#### 3. Ativar Ambiente Virtual (Opcional)
+```bash
+# Opção 1: Ativar manualmente (tradicional)
+source .venv/bin/activate  # Linux/macOS
+# .venv\Scripts\activate   # Windows
+
+# Opção 2: Usar uv run (recomendado - não precisa ativar)
 uv run python --version
 uv run pip list
 ```
 
+#### 4. Verificar Instalação
+```bash
+# Com ambiente ativado
+python --version
+pip list
+
+# Ou com uv run (sem ativar)
+uv run python --version
+uv run pip list
+
+# Verificar dependências específicas
+uv run python -c "import kafka, streamlit, pandas, plotly; print('✅ Todas as dependências OK!')"
+```
+
 ### Executar o Sistema Completo
+
+#### Método 1: Com UV Run (Recomendado)
 ```bash
 # Terminal 1: Iniciar infraestrutura Kafka
 docker-compose up -d
@@ -67,6 +104,22 @@ uv run streamlit run streamlit/dashboard.py
 # Acessar interfaces:
 # 📊 Dashboard: http://localhost:8501
 # 🖥️ Kafka UI: http://localhost:8081
+```
+
+#### Método 2: Com Ambiente Virtual Ativado
+```bash
+# Terminal 1: Kafka
+docker-compose up -d
+
+# Terminal 2: Ativar venv e executar producer
+cd real_time_data
+source .venv/bin/activate  # Linux/macOS
+python csv-monitor/csv_producer.py
+
+# Terminal 3: Ativar venv e executar dashboard
+cd real_time_data
+source .venv/bin/activate  # Linux/macOS
+streamlit run streamlit/dashboard.py
 ```
 
 ### Método Simples (Apenas Dashboard)
@@ -397,21 +450,32 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para detalhes.
 
 ### Desenvolvimento
 ```bash
-# Setup inicial
+# Setup inicial completo
+git clone <URL_DO_REPO>
+cd real_time_data
 uv sync
 
+# Gerenciamento de ambiente
+uv sync                    # Instalar/atualizar dependências
+uv sync --reinstall        # Reinstalar tudo do zero
+uv add nome-da-biblioteca  # Adicionar nova dependência
+uv remove nome-biblioteca  # Remover dependência
+uv sync --upgrade          # Atualizar todas as dependências
+
 # Executar testes
-uv run pytest tests/ -v
+uv run pytest tests/ -v                           # Todos os testes
+uv run pytest tests/test_csv_producer.py -v       # Testes específicos
+uv run pytest tests/ --cov=. --cov-report=html    # Com cobertura
 
-# Executar com cobertura
-uv add pytest-cov --dev
-uv run pytest tests/ --cov=. --cov-report=html
+# Executar aplicações
+uv run python csv-monitor/csv_producer.py         # Producer
+uv run streamlit run streamlit/dashboard.py       # Dashboard
+uv run python -m pytest tests/                    # Testes como módulo
 
-# Adicionar nova dependência
-uv add nome-da-biblioteca
-
-# Atualizar dependências
-uv sync --upgrade
+# Verificar ambiente
+uv run python --version                           # Versão Python
+uv run pip list                                   # Dependências instaladas
+uv tree                                           # Árvore de dependências
 ```
 
 ### Docker
