@@ -1,7 +1,7 @@
 [project]
 name = "real-time-data"
 version = "0.1.0"
-description = "Add your description here"
+description = "Projeto de Atualizacao de Dashboard usando Kafka"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
