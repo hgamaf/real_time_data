@@ -82,13 +82,14 @@ def update_data():
     new_data = load_kafka_data()
     
     if not new_data.empty:
-        # Verificar se há comando de reset
-        reset_messages = new_data[new_data.get('action') == 'reset']
-        if not reset_messages.empty:
-            print("Reset detectado - limpando dados existentes")
-            st.session_state.kafka_data = pd.DataFrame()
-            # Remover mensagens de reset dos novos dados
-            new_data = new_data[new_data.get('action') != 'reset']
+        # Verificar se há comando de reset (apenas se coluna 'action' existir)
+        if 'action' in new_data.columns:
+            reset_messages = new_data[new_data['action'] == 'reset']
+            if not reset_messages.empty:
+                print("Reset detectado - limpando dados existentes")
+                st.session_state.kafka_data = pd.DataFrame()
+                # Remover mensagens de reset dos novos dados
+            new_data = new_data[new_data['action'] != 'reset']
         
         # Processar dados normais
         if not new_data.empty:
