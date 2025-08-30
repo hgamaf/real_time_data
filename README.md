@@ -1,8 +1,16 @@
 # 📊 Real-Time Data Processing System
 
+![Python](https://img.shields.io/badge/python-3.12+-blue.svg)
+![Kafka](https://img.shields.io/badge/kafka--python-2.0.2+-green.svg)
+![Streamlit](https://img.shields.io/badge/streamlit-1.48.1+-red.svg)
+![Pandas](https://img.shields.io/badge/pandas-2.3.2+-orange.svg)
+![Plotly](https://img.shields.io/badge/plotly-5.15.0+-purple.svg)
+![Faker](https://img.shields.io/badge/faker-30.8.2+-yellow.svg)
+![Pytest](https://img.shields.io/badge/pytest-8.4.1+-lightgrey.svg)
+
 ![Dashboard Preview](img/dashboard_img.png)
 
-Sistema completo de processamento e visualização de dados em tempo real que monitora um arquivo CSV, processa via Kafka e exibe os dados em um dashboard interativo usando Streamlit.
+Sistema completo de processamento e visualização de dados em tempo real que gera dados fake usando Faker, processa via Kafka e exibe os dados em um dashboard interativo usando Streamlit.
 
 ## 🎯 Funcionalidades Principais
 
@@ -12,10 +20,10 @@ Sistema completo de processamento e visualização de dados em tempo real que mo
 ✅ **Métricas Dinâmicas**: Valor total, médio, contadores e estatísticas  
 ✅ **Kafka Integration**: Processamento de dados via Apache Kafka  
 ✅ **UI do Kafka**: Interface web moderna para monitorar tópicos e mensagens (Kafka UI)  
-✅ **Sincronização Completa**: Remoção de dados do CSV reflete no dashboard  
+✅ **Geração de Dados Fake**: Dados brasileiros realistas usando Faker  
 ✅ **Testes Automatizados**: Bateria completa de testes com pytest  
 ✅ **100% Open Source**: Migrado para `kafka-python` (sem dependências proprietárias)  
-✅ **Fácil de Usar**: Adicione/remova dados no CSV ou via UI e veja as mudanças instantaneamente  
+✅ **Fácil de Usar**: Dados gerados automaticamente a cada 5 segundos  
 
 ## 🚀 Início Rápido
 
@@ -93,9 +101,9 @@ docker-compose up -d
 
 # Aguardar 60-90 segundos para Kafka inicializar completamente
 
-# Terminal 2: Executar o producer CSV
+# Terminal 2: Executar o gerador de dados fake
 cd real_time_data
-uv run python csv-monitor/csv_producer.py
+uv run python csv-monitor/fake_data_producer.py
 
 # Terminal 3: Executar dashboard
 cd real_time_data
@@ -111,10 +119,10 @@ uv run streamlit run streamlit/dashboard.py
 # Terminal 1: Kafka
 docker-compose up -d
 
-# Terminal 2: Ativar venv e executar producer
+# Terminal 2: Ativar venv e executar gerador fake
 cd real_time_data
 source .venv/bin/activate  # Linux/macOS
-python csv-monitor/csv_producer.py
+python csv-monitor/fake_data_producer.py
 
 # Terminal 3: Ativar venv e executar dashboard
 cd real_time_data
@@ -131,8 +139,8 @@ uv run streamlit run streamlit/dashboard.py
 # 2. Abrir no navegador
 # http://localhost:8501
 
-# 3. Testar adicionando dados
-echo "8,Roberto,45,Fortaleza,275.50" >> data/input.csv
+# 3. Para ver dados, execute o gerador fake em outro terminal
+uv run python csv-monitor/fake_data_producer.py
 ```
 
 ## 📊 Dashboard Features
@@ -159,19 +167,19 @@ echo "8,Roberto,45,Fortaleza,275.50" >> data/input.csv
 
 ### Arquitetura Completa (Atual)
 ```
-📁 CSV File → 🔍 CSV Monitor → 📡 Kafka → 📊 Dashboard
-    ↓              ↓              ↓         ↓
-data/input.csv → csv_producer.py → Topic → Streamlit
+🎭 Faker → � FakeS Producer → 📡 Kafka → 📊 Dashboard
+    ↓           ↓               ↓         ↓
+Dados BR → fake_data_producer.py → Topic → Streamlit
                                     ↓
                               🖥️ Kafka UI (Management)
 ```
 
 ### Fluxo de Dados
-1. **CSV Monitor** detecta mudanças no arquivo `data/input.csv`
-2. **Producer** envia dados para o tópico Kafka `csv-data` usando `kafka-python`
+1. **Faker** gera dados brasileiros realistas (nomes, cidades, valores)
+2. **Fake Producer** envia dados para o tópico Kafka `csv-data` usando `kafka-python`
 3. **Dashboard** consome dados do Kafka em tempo real usando `KafkaConsumer`
 4. **Kafka UI** permite monitorar tópicos e inserir dados manualmente
-5. **Reset Automático**: Quando dados são removidos do CSV, envia comando de reset
+5. **Geração Contínua**: Novos dados são gerados automaticamente a cada 5 segundos
 
 ### Stack Tecnológica
 ```
@@ -188,32 +196,44 @@ Dependencies: UV (Python package manager)
 
 ```
 real_time_data/
-├── 📂 streamlit/           # Dashboard principal
-│   └── dashboard.py        # Interface web Streamlit
-├── 📂 csv-monitor/         # Monitor e Producer Kafka
-│   └── csv_producer.py     # Monitora CSV e envia para Kafka
-├── 📂 data/               # Dados de entrada  
-│   └── input.csv          # Arquivo CSV monitorado
-├── 📂 tests/              # Testes automatizados
-│   ├── __init__.py        # Pacote de testes
-│   ├── test_csv_producer.py    # Testes do CSV producer
-│   ├── test_dashboard.py       # Testes do dashboard
-│   └── test_integration.py     # Testes de integração
-├── 📂 img/                # Imagens da documentação
-│   └── dashboard_img.png   # Preview do dashboard
-├── 🐳 docker-compose.yml  # Infraestrutura (Kafka, Zookeeper, AKHQ)
-├── 📄 pyproject.toml      # Dependências Python
-└── 📖 README.md           # Esta documentação
+├── 📂 streamlit/              # Dashboard principal
+│   └── dashboard.py           # Interface web Streamlit
+├── 📂 csv-monitor/            # Gerador de dados fake
+│   └── fake_data_producer.py  # Gera dados fake e envia para Kafka
+├── 📂 data/                   # Diretório vazio (dados agora são gerados)
+├── 📂 tests/                  # Testes automatizados
+│   ├── __init__.py            # Pacote de testes
+│   ├── test_fake_producer.py  # Testes do gerador fake
+│   ├── test_dashboard.py      # Testes do dashboard
+│   └── test_integration.py    # Testes de integração
+├── 📂 img/                    # Imagens da documentação
+│   └── dashboard_img.png      # Preview do dashboard
+├── 🐳 docker-compose.yml      # Infraestrutura (Kafka, Zookeeper, Kafka UI)
+├── � pypreoject.toml          # Dependências Python
+└── �  README.md               # Esta documentação
 ```
 
 ## 🔧 Configuração
 
-### Formato do CSV
-```csv
-id,nome,idade,cidade,valor
-1,João,25,São Paulo,100.50
-2,Maria,30,Rio de Janeir`o,200.75
+### Formato dos Dados Gerados
+```json
+{
+  "id": 1234,
+  "nome": "João Silva",
+  "idade": 30,
+  "cidade": "São Paulo",
+  "valor": 150.50,
+  "timestamp": "2025-08-27T15:30:00"
+}
 ```
+
+### Características dos Dados Fake
+- **IDs**: Números aleatórios entre 1000-9999
+- **Nomes**: Nomes brasileiros realistas (Faker pt_BR)
+- **Idades**: Entre 18-80 anos
+- **Cidades**: 25 cidades brasileiras principais
+- **Valores**: Entre R$ 50,00 - R$ 2.000,00
+- **Timestamp**: ISO format automático
 
 ### Serviços Disponíveis
 - **Dashboard Streamlit**: http://localhost:8501
@@ -221,15 +241,15 @@ id,nome,idade,cidade,valor
 - **Kafka Broker**: localhost:9092  
 - **Zookeeper**: localhost:2181
 
-### Como Inserir/Remover Dados
+### Como Gerar/Inserir Dados
 
-#### Via CSV (Automático)
+#### Via Gerador Fake (Automático)
 ```bash
-# Adicionar nova linha no CSV
-echo "11,Fernanda,29,Fortaleza,680.90" >> data/input.csv
+# Executar gerador com intervalo padrão (5 segundos)
+uv run python csv-monitor/fake_data_producer.py
 
-# Remover dados (editar arquivo manualmente)
-# O dashboard será automaticamente atualizado para refletir as mudanças
+# O gerador perguntará o intervalo desejado
+# Dados são gerados automaticamente e enviados para Kafka
 ```
 
 #### Via Kafka UI
@@ -347,7 +367,7 @@ docker-compose restart kafka
 ```
 
 ### Dashboard não atualiza
-- Verifique se o CSV producer está rodando com `uv run`
+- Verifique se o gerador fake está rodando com `uv run`
 - Confirme se há dados no tópico Kafka via Kafka UI (http://localhost:8081)
 - Use o botão "🗑️ Limpar Cache" no dashboard
 - Reinicie o dashboard: `uv run streamlit run streamlit/dashboard.py`
@@ -365,10 +385,11 @@ uv run pip list
 uv run python csv-monitor/csv_producer.py
 ```
 
-### Dados removidos do CSV não somem do dashboard
-- O sistema envia comandos de reset automaticamente
+### Dados não aparecem no dashboard
+- Verifique se o gerador fake está rodando
+- Confirme se o Kafka está online na Kafka UI
 - Use o botão "🗑️ Limpar Cache" se necessário
-- Verifique se o CSV producer detectou a mudança no arquivo
+- Reinicie o gerador fake se necessário
 
 ### Testes falhando
 ```bash
@@ -439,12 +460,13 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para detalhes.
 ✅ **100% Open Source**: Sem dependências proprietárias  
 
 ### Funcionalidades Avançadas
-- 🔄 **Reset Automático**: Quando dados são removidos do CSV, o dashboard é limpo automaticamente
-- 🧪 **Testes Completos**: 9 testes cobrindo todas as funcionalidades principais
+- 🎭 **Dados Brasileiros**: Nomes e cidades realistas usando Faker pt_BR
+- 🧪 **Testes Completos**: 13 testes cobrindo todas as funcionalidades principais
 - 🗑️ **Controle Manual**: Botão para limpar cache quando necessário
 - 📊 **Métricas Precisas**: Cálculos com tratamento de precisão decimal
 - ⚡ **Performance**: Migração para `kafka-python` melhorou a performance
 - 🔧 **UV Integration**: Gerenciamento moderno de dependências
+- ⏱️ **Intervalo Configurável**: Ajuste o tempo entre gerações de dados
 
 ## 📋 Comandos Úteis
 
@@ -468,7 +490,7 @@ uv run pytest tests/test_csv_producer.py -v       # Testes específicos
 uv run pytest tests/ --cov=. --cov-report=html    # Com cobertura
 
 # Executar aplicações
-uv run python csv-monitor/csv_producer.py         # Producer
+uv run python csv-monitor/fake_data_producer.py   # Gerador fake
 uv run streamlit run streamlit/dashboard.py       # Dashboard
 uv run python -m pytest tests/                    # Testes como módulo
 
